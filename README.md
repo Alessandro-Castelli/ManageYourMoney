@@ -33,12 +33,6 @@ Nessun database, nessun account, nessun cloud — solo file CSV sul tuo computer
 - 💸 **Gratis e senza chiavi API**: usa la ricerca pubblica e `yfinance` di Yahoo
   Finance, nessuna registrazione richiesta.
 
-## Anteprima
-
-*(Aggiungi qui uno screenshot della dashboard — lancia `streamlit run app.py`,
-fai uno screenshot, salvalo come `docs/screenshot.png` e sostituisci questa riga con
-`![Dashboard](docs/screenshot.png)`. È la prima cosa che chi visita il repo guarda.)*
-
 ## Installazione
 
 ```powershell

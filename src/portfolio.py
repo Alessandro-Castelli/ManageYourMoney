@@ -160,6 +160,14 @@ def calcola_portafoglio(forza_aggiornamento: bool = False) -> dict:
         })
     posizioni_calc = pd.DataFrame(righe)
 
+    allocazione_settore: dict[str, float] = {}
+    if not posizioni_calc.empty:
+        coppie = list(posizioni_calc[["ticker", "tipo"]].drop_duplicates().itertuples(index=False, name=None))
+        settori_per_ticker = market_data.aggiorna_settori(coppie, forza=forza_aggiornamento)
+        for _, r in posizioni_calc.iterrows():
+            for settore, peso in settori_per_ticker.get(r["ticker"], {}).items():
+                allocazione_settore[settore] = allocazione_settore.get(settore, 0.0) + r["valore_attuale_eur"] * peso
+
     liquidita = storage.load("liquidita")
     liquidita["importo"] = pd.to_numeric(liquidita["importo"], errors="coerce").fillna(0.0)
     if not liquidita.empty:
@@ -227,6 +235,7 @@ def calcola_portafoglio(forza_aggiornamento: bool = False) -> dict:
         "totali": totali,
         "allocazione_tipo": allocazione_tipo,
         "allocazione_valuta": allocazione_valuta,
+        "allocazione_settore": allocazione_settore,
         "avvisi": avvisi,
     }
 

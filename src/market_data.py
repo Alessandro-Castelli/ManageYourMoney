@@ -146,3 +146,68 @@ def aggiorna_prezzi(tickers: list[str], forza: bool = False, validita_minuti: in
 
     storage.save("prezzi_cache", cache)
     return risultati
+
+
+def _normalizza_settore(chiave: str) -> str:
+    k = str(chiave).strip().lower().replace(" ", "_").replace("-", "_")
+    return "real_estate" if k == "realestate" else k
+
+
+def settori_posizione(ticker: str, tipo: str) -> dict[str, float]:
+    """Ritorna {settore_canonico: peso 0-1} per un ticker. Dict vuoto se non disponibile.
+
+    Per un ETF usa la scomposizione settoriale del fondo (yfinance); per un'azione
+    usa il settore GICS della singola società (peso 1.0, è tutta in quel settore).
+    """
+    try:
+        t = yf.Ticker(ticker)
+        if tipo == "ETF":
+            pesi = dict(t.funds_data.sector_weightings or {})
+            return {_normalizza_settore(k): float(v) for k, v in pesi.items() if v}
+        try:
+            settore = t.info.get("sector")
+        except Exception:
+            settore = None
+        return {_normalizza_settore(settore): 1.0} if settore else {}
+    except Exception:
+        return {}
+
+
+def aggiorna_settori(posizioni: list[tuple[str, str]], forza: bool = False,
+                      validita_minuti: int = 1440) -> dict[str, dict[str, float]]:
+    """Aggiorna la cache settori per (ticker, tipo) richiesti e ritorna {ticker: {settore: peso}}.
+
+    Cache valida 1 giorno di default: la composizione di un fondo cambia lentamente,
+    a differenza del prezzo non serve rinfrescarla ad ogni accesso.
+    """
+    posizioni = list({(tk, tp) for tk, tp in posizioni if tk})
+    cache = storage.load("settori_cache")
+    risultati: dict[str, dict[str, float]] = {}
+    ora = datetime.now()
+
+    for ticker, tipo in posizioni:
+        righe_cache = cache[cache["ticker"] == ticker]
+        fresco = False
+        if not forza and not righe_cache.empty:
+            try:
+                ts = datetime.strptime(righe_cache.iloc[0]["data_aggiornamento"], "%Y-%m-%d %H:%M:%S")
+                fresco = (ora - ts).total_seconds() < validita_minuti * 60
+            except Exception:
+                fresco = False
+
+        if fresco:
+            risultati[ticker] = {r["settore"]: float(r["peso"]) for _, r in righe_cache.iterrows()}
+            continue
+
+        pesi = settori_posizione(ticker, tipo)
+        cache = cache[cache["ticker"] != ticker]
+        if pesi:
+            nuove = pd.DataFrame([
+                {"ticker": ticker, "settore": s, "peso": p, "data_aggiornamento": storage.timestamp()}
+                for s, p in pesi.items()
+            ])
+            cache = pd.concat([cache, nuove], ignore_index=True)
+        risultati[ticker] = pesi
+
+    storage.save("settori_cache", cache)
+    return risultati

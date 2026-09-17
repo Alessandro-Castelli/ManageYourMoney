@@ -25,6 +25,32 @@ ARANCIO_SEQ = "#eb6834"
 BUONO = "#006300"
 CRITICO = "#d03b3b"
 
+# Settori "primari" con colore fisso; qualsiasi altro settore (o non classificato)
+# confluisce sempre nel bucket "Altro" con colore neutro - mai un colore per rank.
+COLORI_SETTORE = {
+    "technology": "#2a78d6",
+    "financial_services": "#eb6834",
+    "healthcare": "#1baf7a",
+    "consumer_cyclical": "#eda100",
+    "industrials": "#e87ba4",
+    "communication_services": "#008300",
+    "consumer_defensive": "#4a3aa7",
+}
+COLORE_ALTRO = "#898781"
+ETICHETTE_SETTORE = {
+    "technology": "Tecnologia",
+    "financial_services": "Servizi Finanziari",
+    "healthcare": "Salute",
+    "consumer_cyclical": "Consumi Ciclici",
+    "industrials": "Industria",
+    "communication_services": "Comunicazione",
+    "consumer_defensive": "Consumi Defensivi",
+    "energy": "Energia",
+    "utilities": "Utility",
+    "real_estate": "Immobiliare",
+    "basic_materials": "Materie Prime",
+}
+
 st.set_page_config(page_title="Le Mie Finanze", layout="wide", page_icon="💶")
 storage.ensure_data_files()
 
@@ -128,6 +154,39 @@ with col_b:
         st.plotly_chart(fig, width='stretch')
     else:
         st.info("Portafoglio in un'unica valuta: nessuna scomposizione necessaria.")
+
+st.subheader("Allocazione per settore (ETF / Azioni)")
+alloc_settore = dati["allocazione_settore"]
+if alloc_settore:
+    primari = {s: v for s, v in alloc_settore.items() if s in COLORI_SETTORE}
+    resto = sum(v for s, v in alloc_settore.items() if s not in COLORI_SETTORE)
+    segmenti = sorted(primari.items(), key=lambda x: -x[1])
+    if resto:
+        segmenti.append(("altro", resto))
+    totale = sum(alloc_settore.values())
+
+    fig = go.Figure()
+    for settore, valore in segmenti:
+        pct = valore / totale * 100 if totale else 0
+        etichetta = "Altro" if settore == "altro" else ETICHETTE_SETTORE.get(settore, settore.title())
+        colore = COLORE_ALTRO if settore == "altro" else COLORI_SETTORE[settore]
+        fig.add_trace(go.Bar(
+            y=["Portafoglio"], x=[valore], name=etichetta, orientation="h",
+            marker_color=colore,
+            text=f"{etichetta}<br>€ {valore:,.0f} ({pct:.0f}%)", textposition="inside",
+            hovertemplate=f"{etichetta}: €%{{x:,.2f}} ({pct:.1f}%)<extra></extra>",
+        ))
+    fig.update_layout(
+        barmode="stack", showlegend=True, height=220,
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis_title="EUR", yaxis=dict(visible=False),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.5),
+    )
+    st.plotly_chart(fig, width='stretch')
+    st.caption("Composizione settoriale dei fondi/azioni in portafoglio (Yahoo Finance). "
+               "Non disponibile la scomposizione per area geografica per questi ETF.")
+else:
+    st.info("Composizione settoriale non disponibile per le posizioni attuali.")
 
 # --- Composizione posizioni ----------------------------------------------
 posizioni = dati["posizioni"]

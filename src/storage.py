@@ -17,6 +17,7 @@ SCHEMI = {
                         "data_scadenza", "note"],
     "isin_ticker_map": ["isin", "ticker", "nome", "valuta"],
     "prezzi_cache": ["ticker", "prezzo", "valuta", "data_aggiornamento"],
+    "settori_cache": ["ticker", "settore", "peso", "data_aggiornamento"],
     "storico_valore": ["data", "valore_posizioni", "valore_liquidita",
                         "valore_conti_deposito", "valore_totale", "valore_investito"],
 }

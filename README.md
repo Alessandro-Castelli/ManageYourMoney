@@ -4,6 +4,8 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Streamlit](https://img.shields.io/badge/dashboard-Streamlit-ff4b4b)
 ![Data](https://img.shields.io/badge/dati-100%25%20locali-lightgrey)
+[![GitHub stars](https://img.shields.io/github/stars/Alessandro-Castelli/ManageYourMoney?style=social)](https://github.com/Alessandro-Castelli/ManageYourMoney/stargazers)
+![Last commit](https://img.shields.io/github/last-commit/Alessandro-Castelli/ManageYourMoney)
 
 **Tracker di portafoglio personale — ETF, azioni, liquidità e conti deposito.**
 Inserisci solo il codice ISIN: prezzo, ticker e valuta vengono risolti in automatico.

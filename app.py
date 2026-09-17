@@ -229,6 +229,34 @@ if not posizioni.empty:
             "Guad./Perd. (%)": st.column_config.NumberColumn(format="%+.2f%%"),
         },
     )
+
+    st.markdown("**Aggiungi un versamento**")
+    for _, pos in posizioni.iterrows():
+        col_info, col_azione = st.columns([5, 1])
+        col_info.markdown(
+            f"{pos['nome']} · `{pos['isin']}` — {pos['quantita']:.4f} quote, "
+            f"€ {pos['valore_attuale_eur']:,.2f}"
+        )
+        with col_azione.popover("➕ Versamento"):
+            st.caption(f"Nuovo versamento su **{pos['nome']}** ({pos['isin']})")
+            nuova_q = st.number_input(
+                "Quantità", min_value=0.0, step=1.0, format="%.4f", key=f"q_{pos['id']}")
+            nuovo_p = st.number_input(
+                "Prezzo per unità", min_value=0.0, step=0.01, format="%.4f", key=f"p_{pos['id']}")
+            nuova_d = st.date_input("Data", key=f"d_{pos['id']}")
+            if st.button("Conferma", key=f"conferma_{pos['id']}"):
+                if nuova_q <= 0:
+                    st.warning("Inserisci una quantità > 0.")
+                else:
+                    riga = portfolio.aggiungi_posizione(
+                        pos["tipo"], pos["isin"], nuova_q, nuovo_p, str(nuova_d), pos["valuta"], "")
+                    _carica_dati.clear()
+                    st.toast(
+                        f"Versamento aggiunto: {riga['nome']} — quantità totale "
+                        f"{float(riga['quantita']):.4f}, prezzo medio {float(riga['prezzo_acquisto']):.4f} {riga['valuta']}",
+                        icon="✅",
+                    )
+                    st.rerun()
 else:
     st.info("Nessuna posizione ETF/Azione: aggiungine una dalla barra laterale.")
 
@@ -311,7 +339,14 @@ with st.sidebar.form("form_posizione", clear_on_submit=True):
                 riga = portfolio.aggiungi_posizione(
                     tipo, isin, quantita, prezzo_acquisto, str(data_acquisto), valuta_acq, note_pos)
                 _carica_dati.clear()
-                st.sidebar.success(f"Aggiunta: {riga['nome']} ({riga['ticker']})")
+                if riga["nuova_posizione"]:
+                    st.toast(f"Aggiunta posizione: {riga['nome']} ({riga['ticker']})", icon="✅")
+                else:
+                    st.toast(
+                        f"Versamento aggiunto: {riga['nome']} — quantità totale "
+                        f"{float(riga['quantita']):.4f}, prezzo medio {float(riga['prezzo_acquisto']):.4f} {riga['valuta']}",
+                        icon="✅",
+                    )
                 st.rerun()
             except ValueError as e:
                 st.sidebar.error(str(e))
@@ -328,7 +363,7 @@ with st.sidebar.form("form_liquidita", clear_on_submit=True):
         else:
             portfolio.aggiungi_liquidita(descrizione, importo_liq, valuta_liq, note_liq)
             _carica_dati.clear()
-            st.sidebar.success("Liquidità aggiunta.")
+            st.toast("Liquidità aggiunta.", icon="✅")
             st.rerun()
 
 with st.sidebar.form("form_conto_deposito", clear_on_submit=True):
@@ -345,7 +380,7 @@ with st.sidebar.form("form_conto_deposito", clear_on_submit=True):
         else:
             portfolio.aggiungi_conto_deposito(banca, importo_cd, tasso, str(apertura), str(scadenza), note_cd)
             _carica_dati.clear()
-            st.sidebar.success("Conto deposito aggiunto.")
+            st.toast("Conto deposito aggiunto.", icon="✅")
             st.rerun()
 
 st.sidebar.divider()
@@ -365,7 +400,7 @@ if not df_rim.empty:
     if st.sidebar.button("🗑️ Rimuovi selezionato"):
         mappa_rimuovi[categoria_rim](opzioni[scelta])
         _carica_dati.clear()
-        st.sidebar.success("Rimosso.")
+        st.toast("Rimosso.", icon="✅")
         st.rerun()
 else:
     st.sidebar.caption("Nessun elemento da rimuovere in questa categoria.")

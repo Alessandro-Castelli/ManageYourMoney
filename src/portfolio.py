@@ -18,12 +18,36 @@ TIPI_POSIZIONE = ["ETF", "Azione"]
 
 def aggiungi_posizione(tipo: str, isin: str, quantita: float, prezzo_acquisto: float,
                         data_acquisto: str, valuta: str | None = None, note: str = "") -> dict:
+    """Aggiunge una posizione. Se esiste già una posizione sullo stesso ISIN e valuta
+    (es. un nuovo versamento di un PAC), la incrementa invece di creare una riga
+    separata: quantità sommata, prezzo di acquisto ricalcolato come media ponderata.
+    """
     isin = isin.strip().upper()
     info = market_data.resolve_isin(isin)
     if info is None:
         raise ValueError(f"ISIN '{isin}' non trovato su Yahoo Finance. Verifica il codice.")
+    valuta_finale = valuta or info.get("valuta") or VALUTA_BASE
 
     df = storage.load("posizioni")
+    esistente = df[(df["isin"] == isin) & (df["valuta"] == valuta_finale)]
+
+    if not esistente.empty:
+        idx = esistente.index[0]
+        vecchia_quantita = float(esistente.iloc[0]["quantita"])
+        vecchio_prezzo = float(esistente.iloc[0]["prezzo_acquisto"])
+        nuova_quantita = vecchia_quantita + quantita
+        nuovo_prezzo_medio = (vecchia_quantita * vecchio_prezzo + quantita * prezzo_acquisto) / nuova_quantita
+
+        df.loc[idx, "quantita"] = str(nuova_quantita)
+        df.loc[idx, "prezzo_acquisto"] = str(nuovo_prezzo_medio)
+        if note:
+            df.loc[idx, "note"] = note
+        storage.save("posizioni", df)
+
+        riga = df.loc[idx].to_dict()
+        riga["nuova_posizione"] = False
+        return riga
+
     riga = {
         "id": storage.next_id(df),
         "tipo": tipo,
@@ -32,11 +56,12 @@ def aggiungi_posizione(tipo: str, isin: str, quantita: float, prezzo_acquisto: f
         "nome": info["nome"],
         "quantita": quantita,
         "prezzo_acquisto": prezzo_acquisto,
-        "valuta": valuta or info.get("valuta") or VALUTA_BASE,
+        "valuta": valuta_finale,
         "data_acquisto": data_acquisto,
         "note": note,
     }
     storage.append_row("posizioni", riga)
+    riga["nuova_posizione"] = True
     return riga
 
 

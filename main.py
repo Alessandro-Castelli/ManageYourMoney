@@ -97,7 +97,14 @@ def azione_aggiungi_posizione() -> None:
     note = Prompt.ask("Note (opzionale)", default="")
     try:
         riga = portfolio.aggiungi_posizione(tipo, isin, quantita, prezzo_acquisto, data_acquisto, valuta, note)
-        console.print(f"[green]Aggiunta posizione:[/green] {riga['nome']} ({riga['ticker']})")
+        if riga["nuova_posizione"]:
+            console.print(f"[green]Aggiunta posizione:[/green] {riga['nome']} ({riga['ticker']})")
+        else:
+            console.print(
+                f"[green]Versamento aggiunto a posizione esistente:[/green] {riga['nome']} — "
+                f"quantità totale {float(riga['quantita']):.4f}, prezzo medio di carico "
+                f"{float(riga['prezzo_acquisto']):.4f} {riga['valuta']}"
+            )
     except ValueError as e:
         console.print(f"[red]Errore:[/red] {e}")
 
